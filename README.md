@@ -1,0 +1,2 @@
+# amqp-publisher
+AMQP Publisher
