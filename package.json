@@ -1,0 +1,33 @@
+{
+  "name": "amqp-publisher",
+  "version": "1.0.0",
+  "description": "Hugtech AMQP Message Publisher",
+  "main": "index.ts",
+  "scripts": {
+    "bundle": "npm run format:write && npm run package",
+    "format:write": "prettier --write **/*.ts",
+    "format:check": "prettier --check **/*.ts",
+    "lint": "eslint --cache --fix",
+    "lint:check": "eslint --cache",
+    "lint-staged": "lint-staged",
+    "package": "ncc build src/index.ts --license licenses.txt",
+    "package:watch": "npm run package -- --watch",
+    "all": "npm run format:write && npm run lint && npm run package",
+    "prepare": "husky install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^2.0.2",
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.3",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/node": "^25.0.9",
+    "@vercel/ncc": "^0.38.4",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,12 @@
+name: "Publish RabbitMQ Message"
+description: "Send a RabbitMQ Message via GitHub Actions"
+branding:
+  icon: "message-square"
+  color: "blue"
+inputs:
+  payload:
+    description: "The message you want to send."
+    required: true
+runs:
+  using: "node20"
+  main: "dist/index.js"
