@@ -24,9 +24,12 @@ async function run() {
       // Use @actions/core to get inputs or log messages
       const amqpUrl = payload.amqp_config.rabbitmq_host;
       core.info(`Connecting to RabbitMQ at  ${amqpUrl}...`);
-      console.log("amqp :: %s", amqpUrl);
       // Use amqplib to connect and interact with the broker
-      const connection = await amqp.connect(amqpUrl);
+      const connection = (await Promise.race([
+        amqp.connect(amqpUrl),
+        timeout(10000), // 10 second limit
+      ])) as amqp.Connection;
+
       const channel = await connection.createChannel();
       const queue = process.env.QUEUE_NAME || "github_action";
       const exchangeName = process.env.EXCHANGE_NAME || "gitaction_exchange";
