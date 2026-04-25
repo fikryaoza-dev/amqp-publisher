@@ -8,12 +8,12 @@
     "format:write": "prettier --write **/*.ts",
     "format:check": "prettier --check **/*.ts",
     "lint": "eslint --cache --fix",
+    "build": "tsc",
     "lint:check": "eslint --cache",
     "lint-staged": "lint-staged",
     "package": "ncc build src/index.ts --license licenses.txt",
     "package:watch": "npm run package -- --watch",
-    "all": "npm run format:write && npm run lint && npm run package",
-    "prepare": "husky install"
+    "all": "npm run format:write && npm run lint && npm run package"
   },
   "keywords": [],
   "author": "",

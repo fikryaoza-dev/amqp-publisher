@@ -42,12 +42,9 @@ async function publishMessage(
   message: string,
   contentType: string,
 ) {
-  let connection: amqp.Connection | null = null;
-  let channel: amqp.Channel | null = null;
-
   try {
-    connection = await amqp.connect(amqpUrl);
-    channel = await connection.createChannel();
+    const connection = await amqp.connect(amqpUrl);
+    const channel = await connection.createChannel();
 
     // 1. Exchange
     await channel.assertExchange(exchange, "direct", {
@@ -69,9 +66,10 @@ async function publishMessage(
       persistent: true,
       mandatory: true,
     });
+  } catch (err) {
+    console.error("❌ Connection failed:", err);
   } finally {
-    if (channel) await channel.close();
-    if (connection) await connection.close();
+    console.error("❌ Connection closed:");
   }
 }
 
