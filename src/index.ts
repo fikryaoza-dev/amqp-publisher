@@ -1,62 +1,121 @@
 // index.ts
-import * as core from "@actions/core"; // Note the '* as' for correct import
+import * as core from "@actions/core";
 import * as amqp from "amqplib";
 import * as dotenv from "dotenv";
 
-function checkMsgIsJSON(msg: string) {
+dotenv.config();
+
+// ─────────────────────────────────────────────
+// Utils
+// ─────────────────────────────────────────────
+function isJSON(input: string): boolean {
   try {
-    JSON.parse(msg);
-  } catch (error) {
-    console.log("error parse :: %s", error);
+    JSON.parse(input);
+    return true;
+  } catch {
     return false;
   }
-  return true;
 }
 
+function parsePayload(payload: string) {
+  const json = isJSON(payload);
+  return {
+    data: json ? JSON.parse(payload) : payload,
+    contentType: json ? "application/json" : "text/plain",
+  };
+}
+
+function timeout(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Connection timeout")), ms),
+  );
+}
+
+// ─────────────────────────────────────────────
+// RabbitMQ Publisher
+// ─────────────────────────────────────────────
+async function publishMessage(
+  amqpUrl: string,
+  exchange: string,
+  queue: string,
+  routingKey: string,
+  message: string,
+  contentType: string,
+) {
+  let connection: amqp.Connection | null = null;
+  let channel: amqp.Channel | null = null;
+
+  try {
+    connection = await amqp.connect(amqpUrl);
+    channel = await connection.createChannel();
+
+    // 1. Exchange
+    await channel.assertExchange(exchange, "direct", {
+      durable: true,
+    });
+
+    // 2. Queue
+    await channel.assertQueue(queue, {
+      durable: true,
+    });
+
+    // 3. Binding (VERY IMPORTANT)
+    await channel.bindQueue(queue, exchange, routingKey);
+
+    // 4. Publish
+    channel.publish(exchange, routingKey, Buffer.from(message), {
+      contentType,
+      contentEncoding: "utf-8",
+      persistent: true,
+    });
+  } finally {
+    if (channel) await channel.close();
+    if (connection) await connection.close();
+  }
+}
+
+// ─────────────────────────────────────────────
+// Main Runner
+// ─────────────────────────────────────────────
 async function run() {
   try {
-    dotenv.config();
-    const PAYLOAD = core.getInput("payload");
-    const msgIsJSON = checkMsgIsJSON(PAYLOAD);
-    const payload = msgIsJSON ? JSON.parse(PAYLOAD) : PAYLOAD;
-    const contentType = msgIsJSON ? "application/json" : undefined;
-    if (contentType) {
-      // Use @actions/core to get inputs or log messages
-      const amqpUrl = payload.amqp_config.rabbitmq_host;
-      core.info(`Connecting to RabbitMQ at  ${amqpUrl}...`);
-      // Use amqplib to connect and interact with the broker
-      const connection = (await Promise.race([
-        amqp.connect(amqpUrl),
-        timeout(10000), // 10 second limit
-      ])) as amqp.Connection;
+    const rawPayload = core.getInput("payload");
 
-      const channel = await connection.createChannel();
-      const queue = process.env.QUEUE_NAME || "github_action";
-      const exchangeName = process.env.EXCHANGE_NAME || "gitaction_exchange";
-      core.info(`Connected to RabbitMQ at  ${amqpUrl}...`);
-      const routingKey = process.env.ROUTING_KEY || "";
-      await channel.assertExchange(exchangeName, "direct", {
-        durable: false, // Exchange is deleted when broker restarts
-      });
-      console.log("Assert Exchange :: ");
-      await channel.assertQueue(queue, { durable: false });
-      const options = {
-        contentType,
-        contentEncoding: "utf-8", // Recommended to set encoding as well
-        persistent: true, // Example of another common option
-      };
-      console.log("Publish Message :: ");
-      channel.publish(exchangeName, routingKey, Buffer.from(PAYLOAD), options);
-      // channel.sendToQueue(queue, Buffer.from(message), { persistent: true });
-      // await channel.bindQueue(queue, exchangeName, routingKey);
-      core.info(`Sent message: "${PAYLOAD}"`);
+    if (!rawPayload) {
+      throw new Error("Payload is required");
+    }
 
-      await channel.close();
-      await connection.close();
+    const { data, contentType } = parsePayload(rawPayload);
+
+    // safer access
+    const amqpUrl =
+      typeof data === "object" ? data?.amqp_config?.rabbitmq_host : null;
+
+    if (!amqpUrl) {
+      throw new Error("RabbitMQ host not found in payload");
+    }
+
+    const exchange = process.env.EXCHANGE_NAME || "gitaction_exchange";
+    const routingKey = process.env.ROUTING_KEY || "";
+    const queue = process.env.QUEUE_NAME || "";
+    for (let i = 0; i < 3; i++) {
+      try {
+        await publishMessage(
+          amqpUrl,
+          exchange,
+          queue,
+          routingKey,
+          rawPayload,
+          contentType,
+        );
+        break;
+      } catch (e) {
+        if (i === 2) throw e;
+      }
     }
   } catch (error) {
     if (error instanceof Error) {
-      core.setFailed(error.message);
+      core.setFailed(`❌ ${error.message}`);
     }
   }
 }
