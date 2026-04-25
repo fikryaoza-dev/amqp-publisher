@@ -35796,9 +35796,11 @@ function timeout(ms) {
 // RabbitMQ Publisher
 // ─────────────────────────────────────────────
 async function publishMessage(amqpUrl, exchange, queue, routingKey, message, contentType) {
+    let connection;
+    let channel;
     try {
-        const connection = await amqp.connect(amqpUrl);
-        const channel = await connection.createChannel();
+        connection = await amqp.connect(amqpUrl);
+        channel = await connection.createChannel();
         // 1. Exchange
         await channel.assertExchange(exchange, "direct", {
             durable: true,
@@ -35822,6 +35824,11 @@ async function publishMessage(amqpUrl, exchange, queue, routingKey, message, con
     }
     finally {
         console.error("❌ Connection closed:");
+        console.error("❌ Connection closed:");
+        if (channel)
+            await channel.close();
+        if (connection)
+            await connection.close();
     }
 }
 // ─────────────────────────────────────────────
