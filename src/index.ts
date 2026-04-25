@@ -95,8 +95,8 @@ async function run() {
     }
 
     const exchange = process.env.EXCHANGE_NAME || "gitaction_exchange";
-    const routingKey = process.env.ROUTING_KEY || "";
-    const queue = process.env.QUEUE_NAME || "";
+    const routingKey = process.env.ROUTING_KEY || "fikry43_key";
+    const queue = process.env.QUEUE_NAME || "github_action";
     if (!routingKey) {
       throw new Error("ROUTING_KEY is required");
     }
