@@ -67,6 +67,7 @@ async function publishMessage(
       contentType,
       contentEncoding: "utf-8",
       persistent: true,
+      mandatory: true,
     });
   } finally {
     if (channel) await channel.close();
@@ -98,6 +99,15 @@ async function run() {
     const exchange = process.env.EXCHANGE_NAME || "gitaction_exchange";
     const routingKey = process.env.ROUTING_KEY || "";
     const queue = process.env.QUEUE_NAME || "";
+    if (!routingKey) {
+      throw new Error("ROUTING_KEY is required");
+    }
+    console.log("📡 RabbitMQ Config:");
+    console.log({
+      exchange,
+      routingKey,
+      queue,
+    });
     for (let i = 0; i < 3; i++) {
       try {
         await publishMessage(
