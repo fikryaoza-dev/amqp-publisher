@@ -1,6 +1,6 @@
 {
   "name": "amqp-publisher",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Hugtech AMQP Message Publisher",
   "main": "index.ts",
   "scripts": {

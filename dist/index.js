@@ -35846,13 +35846,15 @@ async function run() {
         if (!amqpUrl) {
             throw new Error("RabbitMQ host not found in payload");
         }
-        const exchange = process.env.EXCHANGE_NAME || "gitaction_exchange";
-        const routingKey = process.env.ROUTING_KEY || "fikry43_key";
-        const queue = process.env.QUEUE_NAME || "github_action";
+        const amqpConfig = typeof data === "object" ? data?.amqp_config || {} : {};
+        const exchange = amqpConfig.EXCHANGE_NAME ||
+            process.env.EXCHANGE_NAME ||
+            "gitaction_exchange";
+        const routingKey = amqpConfig.ROUTING_KEY || process.env.ROUTING_KEY || "fikry43_key";
+        const queue = amqpConfig.QUEUE_NAME || process.env.QUEUE_NAME || "github_action";
         if (!routingKey) {
             throw new Error("ROUTING_KEY is required");
         }
-        console.log("📡 RabbitMQ Config:");
         console.log({
             exchange,
             routingKey,
@@ -35861,6 +35863,14 @@ async function run() {
         for (let i = 0; i < 3; i++) {
             try {
                 await publishMessage(amqpUrl, exchange, queue, routingKey, rawPayload, contentType);
+                console.log("📡 PUBLISHING MESSAGE: ", {
+                    amqpUrl,
+                    exchange,
+                    queue,
+                    routingKey,
+                    rawPayload,
+                    contentType,
+                });
                 break;
             }
             catch (e) {
